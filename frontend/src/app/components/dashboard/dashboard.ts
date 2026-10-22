@@ -1,12 +1,10 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NgtCanvas } from 'angular-three';
-import { TopographyScene } from './three-scene.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, NgtCanvas, TopographyScene],
+  imports: [CommonModule],
   template: `
     <div class="dashboard-container">
       <!-- Panel Lateral: Consultor Inteligente -->
@@ -39,11 +37,12 @@ import { TopographyScene } from './three-scene.component';
         </div>
       </aside>
 
-      <!-- Visor 3D Topográfico -->
+      <!-- Visor topográfico -->
       <main class="canvas-container">
-        <!-- NgtCanvas inicializa la escena 3D -->
-        <ngt-canvas [sceneGraph]="scene" />
-        
+        <div class="topography-placeholder">
+          <span>Vista topográfica 3D</span>
+        </div>
+
         <div class="overlay-stats">
           <div class="stat">Proveedores Activos: 24</div>
           <div class="stat warning">Alertas de Vencimiento: 3</div>
@@ -53,10 +52,7 @@ import { TopographyScene } from './three-scene.component';
   `,
   styleUrls: ['./app.component.css']
 })
-export class AppComponent {
-  // Manejo de estado moderno con Signals en Angular 22
-  scene = TopographyScene;
-  
+export class Dashboard {
   suppliers = signal([
     { id: 1, name: 'Perforaciones Andinas SRL', isValid: true, certs: [{ name: 'ISO 9001', expiry: '2027-11-01' }, { name: 'Alta Montaña', expiry: '2026-12-15' }] },
     { id: 2, name: 'Logística Puna SA', isValid: false, certs: [{ name: 'ESG Sostenibilidad', expiry: '2026-09-10' }] }
