@@ -1,7 +1,9 @@
 import { Component, signal, inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms'; // Necesario para ngModel
-import { SupplierService, Supplier } from '../../../servicios/supplier.service';
+import { Observable, catchError, of, timeout } from 'rxjs';
+import { SupplierService, Supplier, PageResponse } from '../../../servicios/supplier.service';
+import { SupplierGraphScene } from '../escena3d/escena3d';
 
 type SupplierStatus = 'VALID' | 'EXPIRING_SOON' | 'EXPIRED';
 
@@ -13,7 +15,7 @@ interface ParsedQuery {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SupplierGraphScene],
   template: `
     <div class="dashboard-container">
       <!-- Panel Lateral: Consultor Inteligente -->
@@ -31,16 +33,34 @@ interface ParsedQuery {
               (keyup.enter)="performSearch()"
               placeholder="Ej: proveedores de transporte en Jujuy..."
             />
-            <button type="button" (click)="performSearch()" [disabled]="isLoading()">
+          </div>
+          <div class="search-actions">
+            <button
+              type="button"
+              class="btn-primary"
+              (click)="performSearch()"
+              [disabled]="isLoading()"
+            >
               Buscar
+            </button>
+            <button
+              type="button"
+              class="btn-ai"
+              (click)="performAiSearch()"
+              [disabled]="isLoading()"
+            >
+              ✨ Buscar con IA
             </button>
           </div>
           <p class="hint">Buscá por rubro, provincia, CUIT o certificación (ej. ISO 45001).</p>
+          @if (aiNotice()) {
+            <p class="notice">{{ aiNotice() }}</p>
+          }
         </div>
 
         <div class="supplier-list">
           @if (isLoading()) {
-            <div class="state">Analizando certificaciones...</div>
+            <div class="state">{{ loadingLabel() }}</div>
           } @else if (errorMessage()) {
             <div class="state error">{{ errorMessage() }}</div>
           } @else if (suppliers().length === 0) {
@@ -86,7 +106,7 @@ interface ParsedQuery {
         </div>
       </aside>
 
-      <!-- Resumen de la búsqueda -->
+      <!-- Resumen de la búsqueda + grafo 3D de proveedores -->
       <main class="canvas-container">
         <div class="summary">
           <div class="stat">
@@ -103,8 +123,21 @@ interface ParsedQuery {
           </div>
         </div>
 
-        <div class="topography-placeholder">
-          <span>Vista topográfica 3D</span>
+        <div class="scene-wrapper">
+          <!-- @defer evita ejecutar WebGL durante el SSR/prerender -->
+          @defer (on immediate) {
+            <app-supplier-graph-scene [suppliers]="suppliers()" />
+          } @placeholder {
+            <div class="topography-placeholder">
+              <span>Vista topográfica 3D</span>
+            </div>
+          }
+        </div>
+
+        <div class="legend">
+          <span class="legend-item"><i class="dot valid"></i> Al día</span>
+          <span class="legend-item"><i class="dot warning"></i> Sin certificaciones</span>
+          <span class="legend-item"><i class="dot expired"></i> Vencido</span>
         </div>
       </main>
     </div>
@@ -118,8 +151,14 @@ export class Dashboard implements OnInit {
   // Estados reactivos
   searchQuery = '';
   isLoading = signal(false);
+  loadingLabel = signal('Analizando certificaciones...');
   suppliers = signal<Supplier[]>([]);
   errorMessage = signal('');
+  /** Mensaje informativo sobre la última búsqueda (ej. si se usó IA o si no estaba disponible). */
+  aiNotice = signal('');
+
+  /** Tiempo máximo de espera para la búsqueda con IA (Ollama local puede demorar o estar apagado). */
+  private static readonly AI_TIMEOUT_MS = 90000;
 
   /** Todos los proveedores cargados desde el backend, base para el filtrado local. */
   private allSuppliers: Supplier[] = [];
@@ -158,6 +197,7 @@ export class Dashboard implements OnInit {
   /** Carga todos los proveedores una sola vez; las búsquedas se resuelven sobre esta lista. */
   loadSuppliers() {
     this.isLoading.set(true);
+    this.loadingLabel.set('Analizando certificaciones...');
     this.errorMessage.set('');
 
     this.supplierService.getSuppliers(undefined, undefined, undefined, 0, 500).subscribe({
@@ -183,6 +223,7 @@ export class Dashboard implements OnInit {
     const query = this.searchQuery.trim();
 
     if (!query) {
+      this.aiNotice.set('');
       this.suppliers.set(this.filterByProvince(this.allSuppliers, 'Jujuy'));
       return;
     }
@@ -203,7 +244,49 @@ export class Dashboard implements OnInit {
     }
 
     this.errorMessage.set('');
+    this.aiNotice.set('');
     this.suppliers.set(results);
+  }
+
+  /**
+   * Búsqueda con IA: manda la consulta en lenguaje natural al backend
+   * (POST /api/suppliers/ai-search), que la traduce a filtros con Ollama.
+   * Si la IA no responde a tiempo, cae a la búsqueda por texto para no dejar la pantalla vacía.
+   */
+  performAiSearch() {
+    const query = this.searchQuery.trim();
+
+    if (!query) {
+      this.performSearch();
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.loadingLabel.set('Consultando IA (puede tardar unos segundos)...');
+    this.errorMessage.set('');
+    this.aiNotice.set('');
+
+    this.supplierService
+      .aiSearch(query)
+      .pipe(
+        timeout(Dashboard.AI_TIMEOUT_MS),
+        catchError((error) => {
+          console.warn('Búsqueda con IA no disponible:', error);
+          return of<PageResponse<Supplier> | null>(null);
+        })
+      )
+      .subscribe((data) => {
+        if (data) {
+          this.suppliers.set(this.normalize(data.content ?? []));
+          this.aiNotice.set('Resultados interpretados con IA a partir de tu consulta.');
+        } else {
+          this.performSearch();
+          this.aiNotice.set(
+            'La búsqueda con IA no respondió (verificá que Ollama esté corriendo en http://localhost:11434). Se muestran resultados por texto.'
+          );
+        }
+        this.isLoading.set(false);
+      });
   }
 
   private filterByProvince(suppliers: Supplier[], province: string): Supplier[] {

@@ -46,6 +46,10 @@
   margin-bottom: 1.5rem;
 }
 
+.search-box {
+  margin-bottom: 1.25rem;
+}
+
 .search-box input {
   width: 100%;
   padding: 0.8rem;
@@ -73,7 +77,14 @@
   margin-bottom: 0;
 }
 
-.search-row button {
+.search-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.search-actions button {
+  flex: 1;
   padding: 0.8rem 1.1rem;
   border: 0;
   border-radius: 6px;
@@ -84,19 +95,29 @@
   transition: background-color 0.2s;
 }
 
-.search-row button:hover:not(:disabled) {
+.search-actions button:hover:not(:disabled) {
   background-color: #ffb733;
 }
 
-.search-row button:disabled {
+.search-actions button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
 .hint {
-  margin: 0.5rem 0 1.5rem;
+  margin: 0.5rem 0 0;
   font-size: 0.75rem;
   color: #8b8b96;
+}
+
+.notice {
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.65rem;
+  border-radius: 6px;
+  border-left: 3px solid #7c3aed;
+  background-color: rgba(124, 58, 237, 0.12);
+  color: #c4b5fd;
+  font-size: 0.78rem;
 }
 
 .state {
@@ -175,13 +196,15 @@
 /* Visor 3D (Derecha) */
 .canvas-container {
   flex: 1;
+  min-width: 0;
   position: relative;
   background: radial-gradient(circle at center, #2a2a35 0%, #121212 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 2rem;
+  gap: 1rem;
+  padding: 1.5rem;
+  box-sizing: border-box;
 }
 
 .summary {
@@ -195,7 +218,11 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 160px;
+  min-width: 120px;
+  padding: 0.6rem 1rem;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid #333;
+  border-radius: 8px;
 }
 
 .summary .stat strong {
@@ -208,13 +235,53 @@
   color: #a0a0a0;
 }
 
-.topography-placeholder {
+.scene-wrapper {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+
+.topography-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
   opacity: 0.6;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  color: #888;
+  font-size: 1.25rem;
 }
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.25rem;
+  font-size: 0.8rem;
+  color: #a0a0a0;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legend .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.legend .dot.valid { background: #10b981; }
+.legend .dot.warning { background: #fca311; }
+.legend .dot.expired { background: #f43f5e; }
 
 .overlay-stats {
   position: absolute;

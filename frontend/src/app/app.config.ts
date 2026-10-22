@@ -5,14 +5,15 @@ import { routes } from './app.routes';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 
 import { provideHttpClient, withFetch } from '@angular/common/http';
+import { provideNgtRenderer } from 'angular-three/dom';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
     provideClientHydration(withEventReplay()),
-    provideHttpClient(withFetch())
+    provideHttpClient(withFetch()),
+    // Renderer de Angular Three (necesario para <ngt-canvas> y los elementos ngt-*)
+    provideNgtRenderer()
   ]
 };
-
-  
