@@ -15,7 +15,7 @@ spring:
         api-key: "AIzaSyCfJl5sejhh1lCzFkjA2MTLoMhISAVFjos"
         chat:
           options:
-            model: gemini-2.5-flash
+            model: gemini-3.8-flash
 
 server:
   port: 8080
