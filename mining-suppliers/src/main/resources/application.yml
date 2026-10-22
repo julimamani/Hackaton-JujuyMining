@@ -8,6 +8,14 @@ spring:
     properties:
       hibernate:
         default_batch_fetch_size: 50
+  # Configuración global de IA (la API key se toma de la variable de entorno GEMINI_API_KEY)
+  ai:
+    google:
+      genai:
+        api-key: "AIzaSyCfJl5sejhh1lCzFkjA2MTLoMhISAVFjos"
+        chat:
+          options:
+            model: gemini-2.5-flash
 
 server:
   port: 8080
