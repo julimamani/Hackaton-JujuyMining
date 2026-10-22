@@ -1,5 +1,5 @@
 import { Component, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
-import { extend } from 'angular-three';
+import { NgtArgs, extend } from 'angular-three';
 import * as THREE from 'three';
 
 // Extendemos los elementos de Three.js para usarlos en el template de Angular
@@ -8,6 +8,7 @@ extend(THREE);
 @Component({
   selector: 'app-topography-scene',
   standalone: true,
+  imports: [NgtArgs],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
     <!-- Iluminación para simular luz solar en el campamento -->

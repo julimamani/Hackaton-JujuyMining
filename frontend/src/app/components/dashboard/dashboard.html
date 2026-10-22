@@ -1,1 +1,132 @@
-<p>dashboard works!</p>
+<div class="dashboard-container">
+  <!-- Panel Lateral: Consultor Inteligente -->
+  <aside class="sidebar">
+    <div class="header">
+      <h1>Jujuy Mining Smart-Check</h1>
+      <p>Validación IA de Proveedores</p>
+    </div>
+
+    <div class="search-box">
+      <input
+        type="text"
+        [value]="query()"
+        (input)="onQueryInput($event)"
+        (keyup.enter)="search()"
+        placeholder="Buscar proveedor, CUIT o norma (ej. ISO 14001)..."
+      />
+      <div class="search-actions">
+        <button type="button" (click)="search()" [disabled]="loading()">Buscar</button>
+        <button type="button" class="ai" (click)="aiSearch()" [disabled]="loading()">
+          Buscar con IA
+        </button>
+      </div>
+    </div>
+
+    @if (error()) {
+      <p class="error">{{ error() }}</p>
+    }
+
+    <div class="supplier-list">
+      @for (supplier of suppliers(); track supplier.id) {
+        <button
+          type="button"
+          class="supplier-card"
+          [class.invalid]="supplier.hasExpiredCertifications"
+          (click)="selectSupplier(supplier.id)"
+        >
+          <div class="supplier-info">
+            <h3>{{ supplier.name }}</h3>
+            <span
+              class="badge"
+              [class.success]="!supplier.hasExpiredCertifications"
+              [class.danger]="supplier.hasExpiredCertifications"
+            >
+              {{
+                supplier.hasExpiredCertifications
+                  ? 'Certificaciones vencidas'
+                  : 'Certificado al día'
+              }}
+            </span>
+          </div>
+          <p class="supplier-meta">
+            {{ supplier.taxId }} · {{ supplier.city }}, {{ supplier.province }}
+          </p>
+          <ul class="cert-list">
+            @for (cert of supplier.validCertifications; track cert) {
+              <li>{{ cert }}</li>
+            } @empty {
+              <li>Sin certificaciones válidas</li>
+            }
+          </ul>
+        </button>
+      } @empty {
+        <p class="empty">
+          {{ loading() ? 'Cargando proveedores...' : 'No se encontraron proveedores.' }}
+        </p>
+      }
+    </div>
+  </aside>
+
+  <!-- Visor topográfico / detalle -->
+  <main class="canvas-container">
+    <div class="topography-placeholder">
+      @if (detailLoading()) {
+        <span>Cargando detalle...</span>
+      } @else if (selected(); as detail) {
+        <div class="detail-panel">
+          <div class="detail-header">
+            <h2>{{ detail.name }}</h2>
+            <button type="button" class="close" (click)="closeDetail()">Cerrar</button>
+          </div>
+          <p>{{ detail.description }}</p>
+
+          <dl>
+            <dt>CUIT</dt>
+            <dd>{{ detail.taxId }}</dd>
+            <dt>Ubicación</dt>
+            <dd>{{ detail.city }}, {{ detail.province }}</dd>
+            <dt>Contacto</dt>
+            <dd>{{ detail.contactEmail }} · {{ detail.contactPhone }}</dd>
+            <dt>Sitio</dt>
+            <dd>
+              <a [href]="detail.website ?? ''" target="_blank" rel="noopener">
+                {{ detail.website }}
+              </a>
+            </dd>
+          </dl>
+
+          <h3>Categorías</h3>
+          <ul class="tag-list">
+            @for (category of detail.categories; track category) {
+              <li>{{ category }}</li>
+            }
+          </ul>
+
+          <h3>Certificaciones</h3>
+          <ul class="cert-detail-list">
+            @for (cert of detail.certifications; track cert.id) {
+              <li [class]="statusClass(cert.status)">
+                <strong>{{ cert.typeName }}</strong>
+                <span>
+                  {{ cert.status }} · vence {{ cert.expirationDate }} ({{
+                    cert.daysToExpire
+                  }}
+                  días)
+                </span>
+              </li>
+            } @empty {
+              <li>Sin certificaciones registradas.</li>
+            }
+          </ul>
+        </div>
+      } @else {
+        <span>Vista topográfica 3D</span>
+      }
+    </div>
+
+    <div class="overlay-stats">
+      <div class="stat">Proveedores: {{ totalElements() }}</div>
+      <div class="stat warning">Con vencidos: {{ expiredCount() }}</div>
+    </div>
+  </main>
+</div>

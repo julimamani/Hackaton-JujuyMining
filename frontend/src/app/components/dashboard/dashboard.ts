@@ -1,60 +1,96 @@
-import { Component, signal } from '@angular/core';
+import { Component, afterNextRender, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Observable, finalize } from 'rxjs';
+
+import {
+  CertificationStatus,
+  PageResponse,
+  SupplierDetail,
+  SupplierSummary,
+} from '../../../models/supplier.model';
+import { SupplierService } from '../../../servicios/supplier.service';
 
 @Component({
-  selector: 'app-root',
+  selector: 'app-dashboard',
   standalone: true,
   imports: [CommonModule],
-  template: `
-    <div class="dashboard-container">
-      <!-- Panel Lateral: Consultor Inteligente -->
-      <aside class="sidebar">
-        <div class="header">
-          <h1>Jujuy Mining Smart-Check</h1>
-          <p>Validación IA de Proveedores</p>
-        </div>
-
-        <div class="search-box">
-          <input type="text" placeholder="Buscar proveedor, CUIT o norma (ej. ISO 14001)..." />
-        </div>
-
-        <div class="supplier-list">
-          @for (supplier of suppliers(); track supplier.id) {
-            <div class="supplier-card" [class.invalid]="!supplier.isValid">
-              <div class="supplier-info">
-                <h3>{{ supplier.name }}</h3>
-                <span class="badge" [class.success]="supplier.isValid" [class.danger]="!supplier.isValid">
-                  {{ supplier.isValid ? 'Certificado al día' : 'Vencido/Faltante' }}
-                </span>
-              </div>
-              <ul class="cert-list">
-                @for (cert of supplier.certs; track cert.name) {
-                  <li><strong>{{ cert.name }}:</strong> Vence {{ cert.expiry }}</li>
-                }
-              </ul>
-            </div>
-          }
-        </div>
-      </aside>
-
-      <!-- Visor topográfico -->
-      <main class="canvas-container">
-        <div class="topography-placeholder" >
-          <span>Vista topográfica 3D</span>
-        </div>
-
-        <div class="overlay-stats">
-          <div class="stat">Proveedores Activos: 24</div>
-          <div class="stat warning">Alertas de Vencimiento: 3</div>
-        </div>
-      </main>
-    </div>
-  `,
-  styleUrls: ['./dashboard.css']
+  templateUrl: './dashboard.html',
+  styleUrls: ['./dashboard.css'],
 })
 export class Dashboard {
-  suppliers = signal([
-    { id: 1, name: 'Perforaciones Andinas SRL', isValid: true, certs: [{ name: 'ISO 9001', expiry: '2027-11-01' }, { name: 'Alta Montaña', expiry: '2026-12-15' }] },
-    { id: 2, name: 'Logística Puna SA', isValid: false, certs: [{ name: 'ESG Sostenibilidad', expiry: '2026-09-10' }] }
-  ]);
+  private readonly supplierService = inject(SupplierService);
+
+  readonly suppliers = signal<SupplierSummary[]>([]);
+  readonly totalElements = signal(0);
+  readonly loading = signal(false);
+  readonly error = signal<string | null>(null);
+  readonly query = signal('');
+  readonly selected = signal<SupplierDetail | null>(null);
+  readonly detailLoading = signal(false);
+
+  readonly expiredCount = computed(
+    () => this.suppliers().filter((supplier) => supplier.hasExpiredCertifications).length,
+  );
+
+  constructor() {
+    afterNextRender(() => this.search());
+  }
+
+  onQueryInput(event: Event): void {
+    this.query.set((event.target as HTMLInputElement).value);
+  }
+
+  search(): void {
+    const text = this.query().trim();
+    this.selected.set(null);
+    this.run(this.supplierService.getSuppliers(text ? { text } : {}));
+  }
+
+  aiSearch(): void {
+    const text = this.query().trim();
+    if (!text) {
+      this.error.set('Escribí una consulta para buscar con IA.');
+      return;
+    }
+    this.selected.set(null);
+    this.run(this.supplierService.aiSearch(text));
+  }
+
+  selectSupplier(id: number): void {
+    this.detailLoading.set(true);
+    this.supplierService
+      .getSupplier(id)
+      .pipe(finalize(() => this.detailLoading.set(false)))
+      .subscribe({
+        next: (detail) => this.selected.set(detail),
+        error: () => this.error.set('No se pudo cargar el detalle del proveedor.'),
+      });
+  }
+
+  closeDetail(): void {
+    this.selected.set(null);
+  }
+
+  statusClass(status: CertificationStatus): string {
+    return status.toLowerCase().replace('_', '-');
+  }
+
+  private run(request: Observable<PageResponse<SupplierSummary>>): void {
+    this.loading.set(true);
+    this.error.set(null);
+
+    request.pipe(finalize(() => this.loading.set(false))).subscribe({
+      next: (page) => {
+        this.suppliers.set(page.content);
+        this.totalElements.set(page.totalElements);
+      },
+      error: () => {
+        this.suppliers.set([]);
+        this.totalElements.set(0);
+        this.error.set(
+          'No se pudo conectar con el backend Java. Verificá que esté corriendo en http://localhost:8080.',
+        );
+      },
+    });
+  }
 }

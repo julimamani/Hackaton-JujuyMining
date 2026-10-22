@@ -1,40 +1,93 @@
-import { Injectable, signal } from '@angular/core';
-import { Supplier } from '../models/supplier.model';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { Observable } from 'rxjs';
+
+import { environment } from '../environments/environment';
+import {
+  AiSearchRequest,
+  Category,
+  CertificationType,
+  MatchRequest,
+  PageResponse,
+  SupplierDetail,
+  SupplierMatch,
+  SupplierSearchParams,
+  SupplierSummary,
+} from '../models/supplier.model';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class SupplierService {
-  
-  // Datos simulados para el prototipo
-  private mockSuppliers: Supplier[] = [
-    {
-      id: '1',
-      name: 'Transportes Mineros del Norte S.A.',
-      cuit: '30-12345678-9',
-      overallStatus: 'VERIFIED',
-      aiSummary: 'Documentación al día. PDF analizado exitosamente.',
-      certifications: [
-        { id: 'c1', name: 'ISO 45001 (Seguridad)', expiryDate: '2027-10-15', isValid: true },
-        { id: 'c2', name: 'Habilitación Alta Montaña', expiryDate: '2026-12-01', isValid: true }
-      ]
-    },
-    {
-      id: '2',
-      name: 'Logística y Perforaciones Andinas',
-      cuit: '30-98765432-1',
-      overallStatus: 'WARNING',
-      aiSummary: 'Atención: La certificación ambiental vence en 30 días.',
-      certifications: [
-        { id: 'c3', name: 'Normas de Sostenibilidad ESG', expiryDate: '2026-11-20', isValid: true },
-        { id: 'c4', name: 'ISO 9001 (Calidad)', expiryDate: '2024-05-10', isValid: false }
-      ]
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = environment.apiBaseUrl;
+  private readonly suppliersUrl = `${this.apiUrl}/suppliers`;
+  private readonly catalogUrl = `${this.apiUrl}/catalog`;
+
+  /** GET /api/suppliers?text=&province=&categoryIds=&requiredCertifications=&page=&size=&sort= */
+  getSuppliers(params: SupplierSearchParams = {}): Observable<PageResponse<SupplierSummary>> {
+    return this.http.get<PageResponse<SupplierSummary>>(this.suppliersUrl, {
+      params: this.buildSearchParams(params),
+    });
+  }
+
+  /** GET /api/suppliers/{id} */
+  getSupplier(id: number): Observable<SupplierDetail> {
+    return this.http.get<SupplierDetail>(`${this.suppliersUrl}/${id}`);
+  }
+
+  /** POST /api/suppliers/match */
+  match(request: MatchRequest): Observable<SupplierMatch[]> {
+    return this.http.post<SupplierMatch[]>(`${this.suppliersUrl}/match`, request);
+  }
+
+  /** POST /api/suppliers/ai-search */
+  aiSearch(query: string, page = 0, size = 20): Observable<PageResponse<SupplierSummary>> {
+    const body: AiSearchRequest = { query };
+    const params = new HttpParams().set('page', page).set('size', size).set('sort', 'name');
+
+    return this.http.post<PageResponse<SupplierSummary>>(
+      `${this.suppliersUrl}/ai-search`,
+      body,
+      { params },
+    );
+  }
+
+  /** GET /api/catalog/categories */
+  getCategories(): Observable<Category[]> {
+    return this.http.get<Category[]>(`${this.catalogUrl}/categories`);
+  }
+
+  /** GET /api/catalog/certification-types */
+  getCertificationTypes(): Observable<CertificationType[]> {
+    return this.http.get<CertificationType[]>(`${this.catalogUrl}/certification-types`);
+  }
+
+  private buildSearchParams(params: SupplierSearchParams): HttpParams {
+    let httpParams = new HttpParams();
+
+    if (params.text) {
+      httpParams = httpParams.set('text', params.text);
     }
-  ];
+    if (params.province) {
+      httpParams = httpParams.set('province', params.province);
+    }
+    for (const categoryId of params.categoryIds ?? []) {
+      httpParams = httpParams.append('categoryIds', categoryId);
+    }
+    for (const code of params.requiredCertifications ?? []) {
+      httpParams = httpParams.append('requiredCertifications', code);
+    }
+    if (params.page !== undefined) {
+      httpParams = httpParams.set('page', params.page);
+    }
+    if (params.size !== undefined) {
+      httpParams = httpParams.set('size', params.size);
+    }
+    if (params.sort) {
+      httpParams = httpParams.set('sort', params.sort);
+    }
 
-  constructor() {}
-
-  getSuppliers(): Supplier[] {
-    return this.mockSuppliers;
+    return httpParams;
   }
 }

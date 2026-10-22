@@ -1,17 +1,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { Escena3d } from './escena3d';
+import { TopographyScene } from './escena3d';
 
-describe('Escena3d', () => {
-  let component: Escena3d;
-  let fixture: ComponentFixture<Escena3d>;
+describe('TopographyScene', () => {
+  let component: TopographyScene;
+  let fixture: ComponentFixture<TopographyScene>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Escena3d],
+      imports: [TopographyScene],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(Escena3d);
+    fixture = TestBed.createComponent(TopographyScene);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
