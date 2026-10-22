@@ -39,7 +39,7 @@ import { CommonModule } from '@angular/common';
 
       <!-- Visor topográfico -->
       <main class="canvas-container">
-        <div class="topography-placeholder">
+        <div class="topography-placeholder" >
           <span>Vista topográfica 3D</span>
         </div>
 
@@ -50,7 +50,7 @@ import { CommonModule } from '@angular/common';
       </main>
     </div>
   `,
-  styleUrls: ['./app.component.css']
+  styleUrls: ['./dashboard.css']
 })
 export class Dashboard {
   suppliers = signal([
