@@ -1,40 +1,62 @@
-import { Injectable, signal } from '@angular/core';
-import { Supplier } from '../models/supplier.model';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+/** Coincide con SupplierSummaryDto del backend (GET /api/suppliers y POST /api/suppliers/ai-search). */
+export interface Supplier {
+  id: number;
+  name: string;
+  taxId?: string;
+  province?: string;
+  city?: string;
+  categories: string[];
+  validCertifications: string[];
+  hasExpiredCertifications: boolean;
+}
+
+export interface PageResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class SupplierService {
-  
-  // Datos simulados para el prototipo
-  private mockSuppliers: Supplier[] = [
-    {
-      id: '1',
-      name: 'Transportes Mineros del Norte S.A.',
-      cuit: '30-12345678-9',
-      overallStatus: 'VERIFIED',
-      aiSummary: 'Documentación al día. PDF analizado exitosamente.',
-      certifications: [
-        { id: 'c1', name: 'ISO 45001 (Seguridad)', expiryDate: '2027-10-15', isValid: true },
-        { id: 'c2', name: 'Habilitación Alta Montaña', expiryDate: '2026-12-01', isValid: true }
-      ]
-    },
-    {
-      id: '2',
-      name: 'Logística y Perforaciones Andinas',
-      cuit: '30-98765432-1',
-      overallStatus: 'WARNING',
-      aiSummary: 'Atención: La certificación ambiental vence en 30 días.',
-      certifications: [
-        { id: 'c3', name: 'Normas de Sostenibilidad ESG', expiryDate: '2026-11-20', isValid: true },
-        { id: 'c4', name: 'ISO 9001 (Calidad)', expiryDate: '2024-05-10', isValid: false }
-      ]
-    }
-  ];
+  private http = inject(HttpClient);
+  private baseUrl = 'http://localhost:8080/api';
 
-  constructor() {}
+  // GET /api/suppliers
+  getSuppliers(
+    text?: string,
+    province?: string,
+    certs?: string[],
+    page = 0,
+    size = 10
+  ): Observable<PageResponse<Supplier>> {
+    let params = new HttpParams().set('page', page).set('size', size);
+    if (text) params = params.set('text', text);
+    if (province) params = params.set('province', province);
+    certs?.forEach(cert => params = params.append('requiredCertifications', cert));
 
-  getSuppliers(): Supplier[] {
-    return this.mockSuppliers;
+    return this.http.get<PageResponse<Supplier>>(`${this.baseUrl}/suppliers`, { params });
+  }
+
+  // GET /api/suppliers/{id}
+  getSupplierById(id: string): Observable<Supplier> {
+    return this.http.get<Supplier>(`${this.baseUrl}/suppliers/${id}`);
+  }
+
+  // POST /api/suppliers/match
+  matchSuppliers(requiredCertifications: string[], province?: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/suppliers/match`, { requiredCertifications, province });
+  }
+
+  // POST /api/suppliers/ai-search
+  aiSearch(query: string): Observable<PageResponse<Supplier>> {
+    return this.http.post<PageResponse<Supplier>>(`${this.baseUrl}/suppliers/ai-search`, { query });
   }
 }

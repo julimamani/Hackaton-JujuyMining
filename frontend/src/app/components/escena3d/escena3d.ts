@@ -1,32 +1,56 @@
 import { Component, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { extend } from 'angular-three';
 import * as THREE from 'three';
+import { NgtArgs } from 'angular-three';
 
-// Extendemos los elementos de Three.js para usarlos en el template de Angular
 extend(THREE);
 
 @Component({
-  selector: 'app-topography-scene',
+  selector: 'app-supplier-graph-scene',
   standalone: true,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  imports: [NgtArgs],
   template: `
-    <!-- Iluminación para simular luz solar en el campamento -->
-    <ngt-ambient-light [intensity]="0.5" />
-    <ngt-directional-light [position]="[10, 10, 5]" [intensity]="1" [castShadow]="true" />
+    <!-- Iluminación de la escena -->
+    <ngt-ambient-light [intensity]="0.7" />
+    <ngt-point-light [position]="[10, 10, 10]" [intensity]="1.5" />
+    <ngt-point-light [position]="[-10, -10, -10]" [intensity]="0.5" color="#fca311" />
 
-    <!-- Representación de la superficie / Terreno minero -->
-    <ngt-mesh [rotation]="[-Math.PI / 2, 0, 0]" [position]="[0, -2, 0]">
-      <ngt-plane-geometry *args="[20, 20, 32, 32]" />
-      <ngt-mesh-standard-material color="#4a5d23" [wireframe]="true" />
-    </ngt-mesh>
+    <!-- GRUPO: Proveedor Validado (Verde) -->
+    <ngt-group [position]="[-3, 0, 0]">
+      <!-- Nodo Central: Empresa -->
+      <ngt-mesh>
+        <ngt-sphere-geometry *args="[0.8, 32, 32]" />
+        <ngt-mesh-standard-material color="#10b981" [wireframe]="true" />
+      </ngt-mesh>
+      
+      <!-- Satélite: Certificación 1 -->
+      <ngt-mesh [position]="[1.5, 1, 0]">
+        <ngt-sphere-geometry *args="[0.3, 16, 16]" />
+        <ngt-mesh-standard-material color="#3b82f6" />
+      </ngt-mesh>
 
-    <!-- Marcador de una zona de perforación/operación -->
-    <ngt-mesh [position]="[0, 0, 0]">
-      <ngt-cylinder-geometry *args="[0.5, 0.5, 4, 32]" />
-      <ngt-mesh-standard-material color="#ff9900" />
-    </ngt-mesh>
+      <!-- Satélite: Certificación 2 -->
+      <ngt-mesh [position]="[-1, -1.2, 1]">
+        <ngt-sphere-geometry *args="[0.25, 16, 16]" />
+        <ngt-mesh-standard-material color="#8b5cf6" />
+      </ngt-mesh>
+    </ngt-group>
+
+    <!-- GRUPO: Proveedor con Alerta (Rojo) -->
+    <ngt-group [position]="[3, 1, -2]">
+      <!-- Nodo Central: Empresa -->
+      <ngt-mesh>
+        <ngt-sphere-geometry *args="[0.8, 32, 32]" />
+        <ngt-mesh-standard-material color="#f43f5e" [wireframe]="true" />
+      </ngt-mesh>
+      
+      <!-- Satélite: Certificación Vencida (Rojo) -->
+      <ngt-mesh [position]="[-1.2, 0.8, 0.5]">
+        <ngt-sphere-geometry *args="[0.3, 16, 16]" />
+        <ngt-mesh-standard-material color="#f43f5e" />
+      </ngt-mesh>
+    </ngt-group>
   `
 })
-export class TopographyScene {
-  Math = Math;
-}
+export class SupplierGraphScene {}

@@ -62,6 +62,55 @@
   border-color: #fca311;
 }
 
+.search-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.search-row input {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.search-row button {
+  padding: 0.8rem 1.1rem;
+  border: 0;
+  border-radius: 6px;
+  background-color: #fca311;
+  color: #1e1e24;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.search-row button:hover:not(:disabled) {
+  background-color: #ffb733;
+}
+
+.search-row button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.hint {
+  margin: 0.5rem 0 1.5rem;
+  font-size: 0.75rem;
+  color: #8b8b96;
+}
+
+.state {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  color: #a0a0a0;
+  font-size: 0.9rem;
+}
+
+.state.error {
+  color: #f87171;
+}
+
+
 /* Lista de Proveedores */
 .supplier-list {
   flex: 1;
@@ -106,7 +155,15 @@
 }
 
 .badge.success { background-color: rgba(40, 167, 69, 0.2); color: #4ade80; }
+.badge.warning { background-color: rgba(252, 163, 17, 0.2); color: #fca311; }
 .badge.danger { background-color: rgba(220, 53, 69, 0.2); color: #f87171; }
+
+.meta {
+  margin: 0.15rem 0;
+  font-size: 0.8rem;
+  color: #9a9aa5;
+  overflow-wrap: anywhere;
+}
 
 .cert-list {
   margin: 0;
@@ -120,6 +177,43 @@
   flex: 1;
   position: relative;
   background: radial-gradient(circle at center, #2a2a35 0%, #121212 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.summary .stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 160px;
+}
+
+.summary .stat strong {
+  font-size: 1.8rem;
+  color: #fca311;
+}
+
+.summary .stat span {
+  font-size: 0.8rem;
+  color: #a0a0a0;
+}
+
+.topography-placeholder {
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .overlay-stats {
