@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: mining-suppliers
+  profiles:
+    default: h2
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate:
+        default_batch_fetch_size: 50
+
+server:
+  port: 8080
+
+app:
+  certification:
+    expiring-soon-days: 60
+  cors:
+    allowed-origins: http://localhost:4200,http://localhost:3000,http://localhost:5173
+
+---
+spring:
+  config:
+    activate:
+      on-profile: h2
+  datasource:
+    url: jdbc:h2:mem:miningdb;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+---
+spring:
+  config:
+    activate:
+      on-profile: postgres
+  datasource:
+    url: jdbc:postgresql://localhost:5432/miningdb
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: update
