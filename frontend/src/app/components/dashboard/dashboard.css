@@ -257,6 +257,20 @@
   font-size: 1.25rem;
 }
 
+.scene-hint {
+  position: absolute;
+  bottom: 10px;
+  right: 14px;
+  z-index: 2;
+  font-size: 0.72rem;
+  color: #9a9aa5;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid #2f2f3a;
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+  pointer-events: none;
+}
+
 .legend {
   display: flex;
   flex-wrap: wrap;

@@ -124,6 +124,7 @@ interface ParsedQuery {
         </div>
 
         <div class="scene-wrapper">
+          <div class="scene-hint">Arrastrá para rotar · Scroll para zoom · Hover sobre un nodo</div>
           <!-- @defer evita ejecutar WebGL durante el SSR/prerender -->
           @defer (on immediate) {
             <app-supplier-graph-scene [suppliers]="suppliers()" />
