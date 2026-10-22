@@ -4,15 +4,22 @@ Backend en Java 17 + Spring Boot 3.5 + Spring AI 1.1 + Maven para buscar y valid
 
 ## Correr
 
-La integración con Gemini necesita una API key de Google AI Studio en la variable `GEMINI_API_KEY` (no se commitea):
+La integración usa **Ollama local** (sin API key). Requisitos:
 
 ```bash
-export GEMINI_API_KEY="tu-api-key"
+# 1. Instalar Ollama (https://ollama.com) y levantar el servicio
+ollama serve
 
+# 2. Descargar el modelo configurado en application.yml
+ollama pull llama3.1:8b
+
+# 3. Arrancar la app
 mvn spring-boot:run                              # H2 en memoria (por defecto)
 mvn spring-boot:run -Dspring-boot.run.profiles=postgres   # PostgreSQL (ver application.yml)
 mvn test
 ```
+
+Si usás otro modelo, cambialo en `spring.ai.ollama.chat.options.model` (`llama3.1:8b`, `qwen2.5:7b`, `mistral`, etc.).
 
 H2 console: http://localhost:8080/h2-console  (jdbc:h2:mem:miningdb, user `sa`, sin password)
 
@@ -49,5 +56,5 @@ dto/ mapper/ exception/ config/ (CORS, DataSeeder)
 
 ## IA
 
-`AiAssistantService` usa `ChatClient` (Spring AI + Google Gemini) para convertir lenguaje natural en un
+`AiAssistantService` usa `ChatClient` (Spring AI + Ollama local) para convertir lenguaje natural en un
 `SupplierSearchRequest`; luego llama a `SupplierService.search(...)`. La IA no toca la base: solo arma los filtros.

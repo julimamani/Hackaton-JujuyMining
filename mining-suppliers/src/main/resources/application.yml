@@ -8,14 +8,14 @@ spring:
     properties:
       hibernate:
         default_batch_fetch_size: 50
-  # Configuración global de IA (la API key se toma de la variable de entorno GEMINI_API_KEY)
+  # IA local con Ollama (no requiere API key)
   ai:
-    google:
-      genai:
-        api-key: "AIzaSyCfJl5sejhh1lCzFkjA2MTLoMhISAVFjos"
-        chat:
-          options:
-            model: gemini-3.8-flash
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          model: llama3.1:8b
+          temperature: 0.2
 
 server:
   port: 8080

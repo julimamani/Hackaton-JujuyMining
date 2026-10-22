@@ -16,7 +16,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(properties = "spring.ai.google.genai.api-key=test-key")
+@SpringBootTest
 class SupplierSearchTests {
 
     @Autowired
