@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 /** Coincide con SupplierSummaryDto del backend (GET /api/suppliers y POST /api/suppliers/ai-search). */
 export interface Supplier {
@@ -20,6 +20,12 @@ export interface PageResponse<T> {
   totalPages: number;
   number: number;
   size: number;
+}
+
+/** Resultado de /ai-search + cómo se resolvió la consulta (rules, cache, llm o fallback). */
+export interface AiSearchResult {
+  page: PageResponse<Supplier>;
+  mode: string;
 }
 
 @Injectable({
@@ -56,7 +62,18 @@ export class SupplierService {
   }
 
   // POST /api/suppliers/ai-search
-  aiSearch(query: string): Observable<PageResponse<Supplier>> {
-    return this.http.post<PageResponse<Supplier>>(`${this.baseUrl}/suppliers/ai-search`, { query });
+  aiSearch(query: string): Observable<AiSearchResult> {
+    return this.http
+      .post<PageResponse<Supplier>>(
+        `${this.baseUrl}/suppliers/ai-search`,
+        { query },
+        { observe: 'response' }
+      )
+      .pipe(
+        map((response) => ({
+          page: response.body ?? { content: [], totalElements: 0, totalPages: 0, number: 0, size: 0 },
+          mode: response.headers.get('X-AI-Mode') ?? 'llm'
+        }))
+      );
   }
 }

@@ -10,6 +10,7 @@ import com.iinnoa.miningsuppliers.repository.SupplierRepository;
 import com.iinnoa.miningsuppliers.repository.SupplierSpecifications;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,13 +35,27 @@ public class SupplierService {
      * (natural language -> SupplierSearchRequest -> search) instead of querying the database itself.
      */
     public Page<SupplierSummaryDto> search(SupplierSearchRequest request, Pageable pageable) {
+        return supplierRepository.findAll(buildSpec(request), pageable).map(mapper::toSummary);
+    }
+
+    /**
+     * Misma búsqueda estructurada que {@link #search}, pero sin paginar.
+     * La usa el asistente de IA para rankear por relevancia en memoria.
+     */
+    public List<SupplierSummaryDto> searchAll(SupplierSearchRequest request) {
+        return supplierRepository.findAll(buildSpec(request), Sort.by("name")).stream()
+                .map(mapper::toSummary)
+                .toList();
+    }
+
+    private Specification<Supplier> buildSpec(SupplierSearchRequest request) {
         Specification<Supplier> spec = baseSpec(request.text(), request.province(), request.categoryIds());
 
         LocalDate today = LocalDate.now();
         for (String code : normalize(request.requiredCertifications())) {
             spec = spec.and(SupplierSpecifications.hasValidCertification(code, today));
         }
-        return supplierRepository.findAll(spec, pageable).map(mapper::toSummary);
+        return spec;
     }
 
     public SupplierDetailDto getDetail(Long id) {

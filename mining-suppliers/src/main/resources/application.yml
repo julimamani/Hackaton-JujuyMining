@@ -10,12 +10,22 @@ spring:
         default_batch_fetch_size: 50
   # IA local con Ollama (no requiere API key)
   ai:
+    # No reintentar 10 veces si Ollama está colgado: una sola llamada + timeout.
+    retry:
+      max-attempts: 1
     ollama:
       base-url: http://localhost:11434
       chat:
         options:
           model: llama3.1:8b
-          temperature: 0.2
+          temperature: 0.0
+          # Respuestas cortas (solo el JSON de filtros): menos latencia.
+          num-predict: 160
+  # Si Ollama se cuelga, no dejamos la petición HTTP abierta indefinidamente.
+  http:
+    client:
+      connect-timeout: 2s
+      read-timeout: 15s
 
 server:
   port: 8080

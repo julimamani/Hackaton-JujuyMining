@@ -1,6 +1,6 @@
 import { Component, signal, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { SupplierService, Supplier, PageResponse } from '../../../servicios/supplier.service';
+import { SupplierService, Supplier } from '../../../servicios/supplier.service';
 
 @Component({
   selector: 'app-buscador-proveedores',
@@ -26,9 +26,9 @@ export class Buscador {
 
     // Llamamos al endpoint de IA
     this.proveedoresService.aiSearch(this.searchQuery).subscribe({
-      next: (response: PageResponse<Supplier>) => {
-        // El backend devuelve una Page: los proveedores están en "content".
-        this.suppliers.set(response.content ?? []);
+      next: (response) => {
+        // El backend devuelve una Page: los proveedores están en "page.content".
+        this.suppliers.set(response.page.content ?? []);
         this.isLoading.set(false);
       },
       error: (error: unknown) => {

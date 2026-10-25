@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -51,8 +52,12 @@ public class SupplierController {
 
     /** POST /api/suppliers/ai-search with {"query":"proveedores de transporte en Jujuy con ISO 45001"} */
     @PostMapping("/ai-search")
-    public Page<SupplierSummaryDto> aiSearch(@Valid @RequestBody AiSearchRequest request,
-                                             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
-        return aiAssistantService.search(request.query(), pageable);
+    public ResponseEntity<Page<SupplierSummaryDto>> aiSearch(
+            @Valid @RequestBody AiSearchRequest request,
+            @PageableDefault(size = 20, sort = "name") Pageable pageable) {
+        AiAssistantService.AiSearchResult result = aiAssistantService.search(request.query(), pageable);
+        return ResponseEntity.ok()
+                .header("X-AI-Mode", result.mode())
+                .body(result.page());
     }
 }

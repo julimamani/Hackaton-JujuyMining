@@ -1,8 +1,8 @@
-import { Component, signal, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { Component, DestroyRef, signal, inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms'; // Necesario para ngModel
-import { Observable, catchError, of, timeout } from 'rxjs';
-import { SupplierService, Supplier, PageResponse } from '../../../servicios/supplier.service';
+import { Subscription, catchError, of, timeout } from 'rxjs';
+import { SupplierService, Supplier, AiSearchResult } from '../../../servicios/supplier.service';
 import { SupplierGraphScene } from '../escena3d/escena3d';
 
 type SupplierStatus = 'VALID' | 'EXPIRING_SOON' | 'EXPIRED';
@@ -39,7 +39,6 @@ interface ParsedQuery {
               type="button"
               class="btn-primary"
               (click)="performSearch()"
-              [disabled]="isLoading()"
             >
               Buscar
             </button>
@@ -52,7 +51,10 @@ interface ParsedQuery {
               ✨ Buscar con IA
             </button>
           </div>
-          <p class="hint">Buscá por rubro, provincia, CUIT o certificación (ej. ISO 45001).</p>
+          <p class="hint">
+            Buscá por rubro, provincia, CUIT o certificación (ej. ISO 45001). Las negaciones
+            como "sin ISO 9001" se resuelven con ✨ Buscar con IA.
+          </p>
           @if (aiNotice()) {
             <p class="notice">{{ aiNotice() }}</p>
           }
@@ -148,6 +150,7 @@ interface ParsedQuery {
 export class Dashboard implements OnInit {
   private supplierService = inject(SupplierService);
   private platformId = inject(PLATFORM_ID);
+  private destroyRef = inject(DestroyRef);
 
   // Estados reactivos
   searchQuery = '';
@@ -159,10 +162,13 @@ export class Dashboard implements OnInit {
   aiNotice = signal('');
 
   /** Tiempo máximo de espera para la búsqueda con IA (Ollama local puede demorar o estar apagado). */
-  private static readonly AI_TIMEOUT_MS = 90000;
+  private static readonly AI_TIMEOUT_MS = 30000;
 
   /** Todos los proveedores cargados desde el backend, base para el filtrado local. */
   private allSuppliers: Supplier[] = [];
+
+  /** Petición de IA en curso: se cancela si el usuario vuelve a buscar. */
+  private aiSubscription?: Subscription;
 
   private static readonly PROVINCES = ['Jujuy', 'Salta', 'Catamarca'];
 
@@ -189,6 +195,8 @@ export class Dashboard implements OnInit {
   };
 
   ngOnInit() {
+    this.destroyRef.onDestroy(() => this.aiSubscription?.unsubscribe());
+
     // Evita llamar al backend durante el prerender/SSR: los datos se cargan en el navegador.
     if (isPlatformBrowser(this.platformId)) {
       this.loadSuppliers();
@@ -221,10 +229,16 @@ export class Dashboard implements OnInit {
   }
 
   performSearch() {
+    // Una búsqueda manual siempre gana: cancelamos cualquier consulta de IA pendiente.
+    this.aiSubscription?.unsubscribe();
+    this.aiSubscription = undefined;
+    this.isLoading.set(false);
+
     const query = this.searchQuery.trim();
 
     if (!query) {
       this.aiNotice.set('');
+      this.errorMessage.set('');
       this.suppliers.set(this.filterByProvince(this.allSuppliers, 'Jujuy'));
       return;
     }
@@ -251,8 +265,9 @@ export class Dashboard implements OnInit {
 
   /**
    * Búsqueda con IA: manda la consulta en lenguaje natural al backend
-   * (POST /api/suppliers/ai-search), que la traduce a filtros con Ollama.
-   * Si la IA no responde a tiempo, cae a la búsqueda por texto para no dejar la pantalla vacía.
+   * (POST /api/suppliers/ai-search), que la traduce a filtros (incluidas negaciones
+   * como "sin ISO 9001") y rankea los resultados. Si la IA no responde a tiempo,
+   * cae a la búsqueda por texto; si responde vacío, se muestra el estado sin resultados.
    */
   performAiSearch() {
     const query = this.searchQuery.trim();
@@ -262,31 +277,56 @@ export class Dashboard implements OnInit {
       return;
     }
 
+    // Evita respuestas viejas si el usuario consulta varias veces seguidas.
+    this.aiSubscription?.unsubscribe();
     this.isLoading.set(true);
-    this.loadingLabel.set('Consultando IA (puede tardar unos segundos)...');
+    this.loadingLabel.set('Interpretando tu consulta con IA...');
     this.errorMessage.set('');
     this.aiNotice.set('');
 
-    this.supplierService
+    this.aiSubscription = this.supplierService
       .aiSearch(query)
       .pipe(
         timeout(Dashboard.AI_TIMEOUT_MS),
         catchError((error) => {
           console.warn('Búsqueda con IA no disponible:', error);
-          return of<PageResponse<Supplier> | null>(null);
+          return of<AiSearchResult | null>(null);
         })
       )
       .subscribe((data) => {
-        if (data) {
-          this.suppliers.set(this.normalize(data.content ?? []));
-          this.aiNotice.set('Resultados interpretados con IA a partir de tu consulta.');
-        } else {
+        this.aiSubscription = undefined;
+        this.isLoading.set(false);
+
+        if (!data) {
           this.performSearch();
           this.aiNotice.set(
-            'La búsqueda con IA no respondió (verificá que Ollama esté corriendo en http://localhost:11434). Se muestran resultados por texto.'
+            'La búsqueda con IA no respondió a tiempo. Se muestran resultados por texto; podés reintentar en unos segundos.'
           );
+          return;
         }
-        this.isLoading.set(false);
+
+        const results = this.normalize(data.page.content ?? []);
+        if (!results.length) {
+          this.suppliers.set([]);
+          this.aiNotice.set(
+            'No se encontraron proveedores que cumplan con tu consulta. Probá con otro rubro, provincia o certificación.'
+          );
+          return;
+        }
+
+        this.suppliers.set(results);
+        switch (data.mode) {
+          case 'llm':
+            this.aiNotice.set('Consulta interpretada con IA (modelo local) y ordenada por relevancia.');
+            break;
+          case 'fallback':
+            this.aiNotice.set(
+              'La IA no respondió; se muestran coincidencias por palabras clave ordenadas por relevancia.'
+            );
+            break;
+          default:
+            this.aiNotice.set('Consulta interpretada al instante y ordenada por relevancia.');
+        }
       });
   }
 
